@@ -340,10 +340,10 @@ def contact_form():
     try:
         data = request.get_json()
         
-        Shriyash = data.get('name', '')
-        shriyash22105@gmail.com = data.get('email', '')
+        name = data.get('name', '')
+        email = data.get('email', '')
         message = data.get('message', '')
-        
+
         if not all([name, email, message]):
             return jsonify({
                 'success': False,
