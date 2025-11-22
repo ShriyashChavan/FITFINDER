@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FitFinder - AI Fashion Assistant</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Poppins', sans-serif;
+      background-color: #ffb5b4;
+      color: #333;
+      text-align: center;
+    }
+
+    /* Professional Navigation Bar */
+    nav {
+      background: white;
+      padding: 20px 0;
+      box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+
+    .nav-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 30px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .logo {
+      font-size: 28px;
+      font-weight: 700;
+      color: #ff8c00;
+      letter-spacing: 1px;
+      margin-bottom: 5px;
+    }
+
+    nav ul {
+      list-style: none;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 35px;
+      padding: 0;
+      margin: 0;
+      flex-wrap: wrap;
+    }
+
+    nav ul li a {
+      color: #333;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 16px;
+      transition: all 0.3s ease;
+      padding: 8px 15px;
+      border-radius: 20px;
+      position: relative;
+    }
+
+    nav ul li a:hover {
+      color: #ff8c00;
+      background: #fff5f0;
+      transform: translateY(-2px);
+    }
+
+    nav ul li a.active {
+      color: #ff8c00;
+      background: #fff5f0;
+    }
+
+    .hero {
+      padding: 120px 20px;
+      background: linear-gradient(rgba(255, 140, 0, 0.1), rgba(255, 181, 180, 0.3)),
+                  url('https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=1200') no-repeat center center/cover;
+      color: #333;
+      border-radius: 0 0 30px 30px;
+      min-height: 70vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .hero h1 {
+      font-size: 56px;
+      margin-bottom: 20px;
+      color: #222;
+      font-weight: 700;
+    }
+
+    .hero p {
+      font-size: 24px;
+      margin-bottom: 40px;
+      color: #555;
+      max-width: 700px;
+    }
+
+    .hero-buttons {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .btn {
+      background-color: #ff8c00;
+      color: white;
+      font-weight: bold;
+      padding: 16px 40px;
+      border-radius: 25px;
+      text-decoration: none;
+      transition: 0.3s;
+      box-shadow: 0 4px 15px rgba(255, 140, 0, 0.3);
+      display: inline-block;
+      font-size: 18px;
+    }
+
+    .btn:hover {
+      background-color: #ff7000;
+      transform: translateY(-3px);
+      box-shadow: 0 6px 20px rgba(255, 140, 0, 0.4);
+    }
+
+    .ai-section {
+      background: white;
+      padding: 100px 20px;
+      margin: 60px 20px;
+      border-radius: 20px;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    }
+
+    .ai-section h2 {
+      font-size: 42px;
+      margin-bottom: 25px;
+      color: #222;
+      font-weight: 600;
+    }
+
+    .ai-section p {
+      font-size: 20px;
+      color: #666;
+      margin-bottom: 40px;
+      max-width: 800px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .ai-tools {
+      display: flex;
+      gap: 30px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 40px;
+    }
+
+    .tool-card {
+      background: #fff5f0;
+      padding: 40px 30px;
+      border-radius: 15px;
+      width: 350px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      transition: 0.3s;
+    }
+
+    .tool-card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 6px 25px rgba(0,0,0,0.15);
+    }
+
+    .tool-card h3 {
+      font-size: 26px;
+      color: #ff8c00;
+      margin-bottom: 15px;
+    }
+
+    .tool-card p {
+      font-size: 16px;
+      color: #666;
+      margin-bottom: 25px;
+    }
+
+    footer {
+      background: white;
+      color: #666;
+      padding: 25px;
+      margin-top: 60px;
+      box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+    }
+
+    footer p {
+      font-size: 15px;
+    }
+
+    @media (max-width: 768px) {
+      .nav-container {
+        padding: 0 20px;
+      }
+
+      .logo {
+        font-size: 24px;
+      }
+
+      nav ul {
+        gap: 15px;
+      }
+
+      nav ul li a {
+        font-size: 14px;
+        padding: 6px 12px;
+      }
+
+      .hero h1 {
+        font-size: 36px;
+      }
+
+      .hero p {
+        font-size: 18px;
+      }
+
+      .tool-card {
+        width: 100%;
+        max-width: 350px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <nav>
+    <div class="nav-container">
+      <div class="logo">✨ FitFinder</div>
+      <ul>
+        <li><a href="index.html" class="active">Home</a></li>
+        <li><a href="outfit-generator.html">AI Outfit Generator</a></li>
+        <li><a href="tryon.html">Virtual Try-On</a></li>
+        <li><a href="about.html">About Us</a></li>
+        <li><a href="contact.html">Contact</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <div class="hero">
+    <h1>Welcome To FitFinder</h1>
+    <p>Your personalized AI-powered fashion style assistant</p>
+    <div class="hero-buttons">
+      <a href="outfit-generator.html" class="btn">AI Outfit Generator</a>
+      <a href="tryon.html" class="btn">Virtual Try-On</a>
+    </div>
+  </div>
+
+  <section class="ai-section">
+    <h2>🎨 AI Fashion Tools</h2>
+    <p>Experience the future of fashion with our cutting-edge AI-powered tools designed to transform your style</p>
+    
+    <div class="ai-tools">
+      <div class="tool-card">
+        <h3>✨ AI Outfit Generator</h3>
+        <p>Create stunning fashion combinations effortlessly. Choose your scene, style, and gender to generate AI-powered outfit designs in seconds.</p>
+        <a href="outfit-generator.html" class="btn">Try Now</a>
+      </div>
+
+      <div class="tool-card">
+        <h3>👗 Virtual Try-On</h3>
+        <p>Upload your photo and clothing items to visualize how outfits look on you. See your new look before you buy!</p>
+        <a href="tryon.html" class="btn">Try Now</a>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <p>&copy; 2025 FitFinder | Designed with love to match your style</p>
+  </footer>
+</body>
+</html>

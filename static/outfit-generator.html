@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Outfit Generator - FitFinder</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #ffb5b4;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        nav {
+            background: white;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 15px 0;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        nav .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        nav h1 {
+            font-size: 24px;
+            color: #ff8c00;
+            font-weight: bold;
+        }
+
+        nav ul {
+            list-style: none;
+            display: flex;
+            gap: 25px;
+        }
+
+        nav ul li a {
+            color: #333;
+            text-decoration: none;
+            font-weight: 600;
+            transition: 0.3s;
+        }
+
+        nav ul li a:hover {
+            color: #ff8c00;
+        }
+
+        .hero {
+            text-align: center;
+            padding: 60px 20px;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .hero h2 {
+            font-size: 42px;
+            margin-bottom: 15px;
+            color: #222;
+            font-weight: bold;
+        }
+
+        .hero p {
+            font-size: 18px;
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        .generator {
+            max-width: 1000px;
+            margin: 0 auto 60px;
+            padding: 40px 20px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .option-group h3 {
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: #ff8c00;
+            font-weight: 600;
+        }
+
+        .button-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .option-btn {
+            padding: 10px 20px;
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 25px;
+            color: #333;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .option-btn:hover {
+            background: #fff5f0;
+            border-color: #ff8c00;
+            transform: translateY(-2px);
+        }
+
+        .option-btn.active {
+            background: #ff8c00;
+            border-color: #ff8c00;
+            color: white;
+        }
+
+        .prompt-section {
+            margin: 30px 0;
+        }
+
+        .prompt-input {
+            width: 100%;
+            padding: 15px;
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            color: #333;
+            font-size: 16px;
+            resize: vertical;
+            min-height: 100px;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .prompt-input:focus {
+            outline: none;
+            border-color: #ff8c00;
+        }
+
+        .generate-btn {
+            width: 100%;
+            padding: 18px;
+            background: #ff8c00;
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 20px;
+        }
+
+        .generate-btn:hover {
+            background: #ff7000;
+            transform: translateY(-2px);
+        }
+
+        .generate-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 30px 0;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #ff8c00;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .result {
+            display: none;
+            margin-top: 40px;
+            text-align: center;
+        }
+
+        .result h2 {
+            color: #ff8c00;
+            margin-bottom: 20px;
+        }
+
+        .result img {
+            max-width: 100%;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        footer {
+            text-align: center;
+            padding: 20px;
+            background: white;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+        }
+
+        .error {
+            display: none;
+            background: #ffe6e6;
+            border: 2px solid #ff6b6b;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            color: #d32f2f;
+        }
+
+        @media (max-width: 768px) {
+            nav .container {
+                flex-direction: column;
+                gap: 15px;
+            }
+            nav ul {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+            .hero h2 {
+                font-size: 32px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="container">
+            <h1>✨ FitFinder AI</h1>
+            <ul>
+                <li><a href="index.html">Home</a></li>
+                <li><a href="outfit-generator.html">AI Generator</a></li>
+                <li><a href="tryon.html">Virtual Try-On</a></li>
+                <li><a href="about.html">About</a></li>
+                <li><a href="contact.html">Contact</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="hero">
+        <h2>AI Outfit Generator</h2>
+        <p>Create stunning fashion combinations with AI technology</p>
+    </div>
+
+    <div class="generator">
+        <div class="options-grid">
+            <div class="option-group">
+                <h3>Scene</h3>
+                <div class="button-group" id="sceneButtons">
+                    <button class="option-btn active" data-value="casual">Casual</button>
+                    <button class="option-btn" data-value="work">Work</button>
+                    <button class="option-btn" data-value="date-night">Date Night</button>
+                    <button class="option-btn" data-value="workout">Workout</button>
+                    <button class="option-btn" data-value="formal">Formal</button>
+                    <button class="option-btn" data-value="party">Party</button>
+                </div>
+            </div>
+
+            <div class="option-group">
+                <h3>Style</h3>
+                <div class="button-group" id="styleButtons">
+                    <button class="option-btn active" data-value="minimalist">Minimalist</button>
+                    <button class="option-btn" data-value="vintage">Vintage</button>
+                    <button class="option-btn" data-value="streetwear">Streetwear</button>
+                    <button class="option-btn" data-value="comfort">Comfort</button>
+                    <button class="option-btn" data-value="bohemian">Bohemian</button>
+                    <button class="option-btn" data-value="artistic">Artistic</button>
+                </div>
+            </div>
+
+            <div class="option-group">
+                <h3>Gender</h3>
+                <div class="button-group" id="genderButtons">
+                    <button class="option-btn active" data-value="female">Female</button>
+                    <button class="option-btn" data-value="male">Male</button>
+                    <button class="option-btn" data-value="unisex">Unisex</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="prompt-section">
+            <h3 style="margin-bottom: 15px;">Custom Prompt (Optional)</h3>
+            <textarea 
+                class="prompt-input" 
+                id="customPrompt" 
+                placeholder="Describe your desired outfit... e.g., 'oversized blazer with light blue jeans and white sneakers'"
+            ></textarea>
+        </div>
+
+        <button class="generate-btn" id="generateBtn" onclick="generateOutfit()">
+            🎨 Generate Outfit
+        </button>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p style="color: #666;">Creating your AI-generated outfit...</p>
+        </div>
+
+        <div class="error" id="error"></div>
+
+        <div class="result" id="result">
+            <h2>✨ Your AI-Generated Outfit</h2>
+            <img id="resultImage" alt="Generated outfit">
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; 2025 FitFinder | Transform your style with AI</p>
+    </footer>
+
+    <script>
+        let selectedScene = 'casual';
+        let selectedStyle = 'minimalist';
+        let selectedGender = 'female';
+
+        function setupOptionButtons(containerId, callback) {
+            const buttons = document.querySelectorAll(`#${containerId} .option-btn`);
+            buttons.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    buttons.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    callback(this.dataset.value);
+                });
+            });
+        }
+
+        setupOptionButtons('sceneButtons', value => selectedScene = value);
+        setupOptionButtons('styleButtons', value => selectedStyle = value);
+        setupOptionButtons('genderButtons', value => selectedGender = value);
+
+        async function generateOutfit() {
+            const errorDiv = document.getElementById('error');
+            const loadingDiv = document.getElementById('loading');
+            const resultDiv = document.getElementById('result');
+            const generateBtn = document.getElementById('generateBtn');
+            const customPrompt = document.getElementById('customPrompt').value;
+
+            errorDiv.style.display = 'none';
+            resultDiv.style.display = 'none';
+            loadingDiv.style.display = 'block';
+            generateBtn.disabled = true;
+
+            try {
+                const response = await fetch('http://localhost:5000/generate-outfit', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        scene: selectedScene,
+                        style: selectedStyle,
+                        gender: selectedGender,
+                        custom_prompt: customPrompt
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    document.getElementById('resultImage').src = data.image;
+                    resultDiv.style.display = 'block';
+                    resultDiv.scrollIntoView({ behavior: 'smooth' });
+                } else {
+                    throw new Error(data.error || 'Failed to generate outfit');
+                }
+            } catch (error) {
+                errorDiv.textContent = `❌ Error: ${error.message}. Make sure backend is running on port 5000.`;
+                errorDiv.style.display = 'block';
+            } finally {
+                loadingDiv.style.display = 'none';
+                generateBtn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>
