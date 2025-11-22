@@ -20,6 +20,8 @@ import base64
 import time
 from datetime import datetime
 import json
+import requests
+import io
 
 # Initialize Flask app
 app = Flask(__name__, static_folder='static')
@@ -127,12 +129,19 @@ def generate_outfit():
         prompt = build_prompt(scene, style, gender, custom_prompt)
         print(f"\n📝 Full Prompt: {prompt[:150]}...")
         
-        # For college project demo: Use Hugging Face API or return placeholder
-        # Option 1: Use free API (requires API key)
-        # result_image = generate_with_api(prompt)
-        
-        # Option 2: Return demo placeholder image
-        result_image = generate_demo_image(scene, style, gender)
+        # Try real AI generation if Hugging Face token provided
+        hf_token = os.environ.get('HF_API_TOKEN') or os.environ.get('HUGGINGFACE_API_TOKEN')
+        hf_model = os.environ.get('HF_MODEL', 'stabilityai/stable-diffusion-2-1')
+
+        if hf_token:
+            try:
+                result_image = generate_with_huggingface(prompt, hf_token, hf_model)
+            except Exception as e:
+                print(f"⚠️ Hugging Face generation failed: {e}. Falling back to demo image.")
+                result_image = generate_demo_image(scene, style, gender)
+        else:
+            # Demo placeholder image when no API key is configured
+            result_image = generate_demo_image(scene, style, gender)
         
         # Save result
         timestamp = int(time.time())
@@ -206,6 +215,60 @@ def generate_demo_image(scene, style, gender):
     return f'data:image/png;base64,{img_str}'
 
 
+def generate_with_huggingface(prompt, token, model_id='stabilityai/stable-diffusion-2-1'):
+    """Call Hugging Face Inference API to generate an image from the prompt.
+
+    Returns a data URI (base64 PNG).
+    """
+    api_url = f"https://api-inference.huggingface.co/models/{model_id}"
+    headers = {
+        'Authorization': f'Bearer {token}',
+        'Accept': 'image/png'
+    }
+    payload = {
+        'inputs': prompt
+    }
+
+    print(f"🔗 Calling Hugging Face model: {model_id}")
+    resp = requests.post(api_url, headers=headers, json=payload, timeout=120)
+    if resp.status_code != 200:
+        raise RuntimeError(f"HF API error {resp.status_code}: {resp.text}")
+
+    # Response content is raw image bytes (PNG)
+    img_bytes = resp.content
+    img_b64 = base64.b64encode(img_bytes).decode('utf-8')
+    return f'data:image/png;base64,{img_b64}'
+
+
+def process_tryon_with_api(person_path, cloth_path):
+    """Optional: send uploaded images to an external try-on API if provided.
+
+    Environment variable `TRYON_API_URL` should be set to the service endpoint.
+    The function returns a path to the resulting image or raises on error.
+    """
+    tryon_url = os.environ.get('TRYON_API_URL')
+    if not tryon_url:
+        raise RuntimeError('TRYON_API_URL not set')
+
+    files = {
+        'person_image': open(person_path, 'rb'),
+        'cloth_image': open(cloth_path, 'rb')
+    }
+
+    resp = requests.post(tryon_url, files=files, timeout=120)
+    for f in files.values():
+        f.close()
+
+    if resp.status_code != 200:
+        raise RuntimeError(f"Try-on API error {resp.status_code}: {resp.text}")
+
+    # Assume the API returns raw image bytes
+    out_path = os.path.join(app.config['GENERATED_FOLDER'], f'tryon_result_{int(time.time())}.png')
+    with open(out_path, 'wb') as f:
+        f.write(resp.content)
+    return out_path
+
+
 # ==================== VIRTUAL TRY-ON ====================
 
 @app.route('/api/tryon', methods=['POST'])
@@ -277,8 +340,8 @@ def contact_form():
     try:
         data = request.get_json()
         
-        name = data.get('name', '')
-        email = data.get('email', '')
+        Shriyash = data.get('name', '')
+        shriyash22105@gmail.com = data.get('email', '')
         message = data.get('message', '')
         
         if not all([name, email, message]):
