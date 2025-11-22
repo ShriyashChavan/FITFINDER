@@ -367,7 +367,7 @@
             generateBtn.disabled = true;
 
             try {
-                const response = await fetch('http://localhost:5000/generate-outfit', {
+                const response = await fetch('/api/generate-outfit', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
