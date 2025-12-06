@@ -19,7 +19,6 @@ import time
 import base64
 from datetime import datetime
 
-import requests
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from PIL import Image, ImageDraw
@@ -35,8 +34,7 @@ os.makedirs(app.config['GENERATED_FOLDER'], exist_ok=True)
 
 CONTACTS_FILE = 'contacts.json'
 
-HF_MODEL = os.environ.get('HF_MODEL', 'stabilityai/stable-diffusion-2-1')
-HF_TOKEN = os.environ.get('HF_API_TOKEN') or os.environ.get('HUGGINGFACE_API_TOKEN')
+# Hugging Face integration removed per request: always use demo generator
 
 SCENES = {'casual', 'work', 'date-night', 'workout', 'formal', 'party'}
 STYLES = {'minimalist', 'vintage', 'streetwear', 'comfort', 'bohemian', 'artistic'}
@@ -69,10 +67,9 @@ GENDER_PROMPTS = {
 QUALITY = 'high quality, professional fashion photography, realistic fabric texture, studio lighting'
 
 
-def build_prompt(scene, style, gender, custom=''):
+def build_prompt(scene, style, gender):
+    # Build a concise prompt from selected options (custom prompts removed)
     parts = [GENDER_PROMPTS.get(gender, 'fashion model'), 'wearing', SCENE_PROMPTS.get(scene, ''), STYLE_PROMPTS.get(style, '')]
-    if custom:
-        parts.append(custom)
     parts.append(QUALITY)
     return ', '.join([p for p in parts if p])
 
@@ -104,7 +101,7 @@ def demo_image(scene, style, gender, note='demo'):
 
 @app.get('/api/health')
 def health():
-    return jsonify({'status': 'healthy', 'hf': bool(HF_TOKEN), 'time': datetime.now().isoformat()})
+    return jsonify({'status': 'healthy', 'hf': False, 'time': datetime.now().isoformat()})
 
 
 @app.post('/api/generate-outfit')
@@ -113,25 +110,14 @@ def generate_outfit():
     scene = data.get('scene')
     style = data.get('style')
     gender = data.get('gender')
-    custom = (data.get('custom_prompt') or '').strip()
+    # custom prompt support removed; ignore any `custom_prompt` field
     if scene not in SCENES or style not in STYLES or gender not in GENDERS:
         return jsonify({'success': False, 'error': 'invalid scene/style/gender'}), 400
-    prompt = build_prompt(scene, style, gender, custom)
-    try:
-        if HF_TOKEN:
-            url = f'https://api-inference.huggingface.co/models/{HF_MODEL}'
-            headers = {'Authorization': f'Bearer {HF_TOKEN}', 'Accept': 'image/png'}
-            resp = requests.post(url, headers=headers, json={'inputs': prompt}, timeout=120)
-            if resp.status_code == 200:
-                img_uri = 'data:image/png;base64,' + base64.b64encode(resp.content).decode('utf-8')
-            else:
-                img_uri = demo_image(scene, style, gender, note='hf-failed')
-        else:
-            img_uri = demo_image(scene, style, gender, note='no-hf')
-        saved = save_data_uri(img_uri, app.config['GENERATED_FOLDER'], f'outfit_{scene}_{style}')
-        return jsonify({'success': True, 'file': os.path.basename(saved), 'image': img_uri})
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+    # Always use local demo generator (Hugging Face removed)
+    prompt = build_prompt(scene, style, gender)
+    img_uri = demo_image(scene, style, gender, note='demo-only')
+    saved = save_data_uri(img_uri, app.config['GENERATED_FOLDER'], f'outfit_{scene}_{style}')
+    return jsonify({'success': True, 'file': os.path.basename(saved), 'image': img_uri, 'prompt': prompt})
 
 
 @app.post('/api/tryon')
@@ -201,5 +187,5 @@ def static_files(filename):
 
 
 if __name__ == '__main__':
-    print('FitFinder starting. HF configured:', bool(HF_TOKEN))
+    print('FitFinder starting. HF configured: False')
     app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=False)
