@@ -22,6 +22,7 @@ from datetime import datetime
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from PIL import Image, ImageDraw
+import requests
 
 
 app = Flask(__name__, static_folder='static')
@@ -141,6 +142,65 @@ def tryon():
     img_uri = 'data:image/png;base64,' + base64.b64encode(buf.getvalue()).decode('utf-8')
     saved = save_data_uri(img_uri, app.config['GENERATED_FOLDER'], 'tryon')
     return jsonify({'success': True, 'file': os.path.basename(saved), 'image': img_uri})
+
+
+@app.post('/api/virtual-try-on')
+def virtual_try_on_proxy():
+    """Proxy endpoint: accepts two file uploads and forwards them to external Miragic virtual-try-on API.
+    Expects multipart form with 'person_image' and 'cloth_image' (or 'humanImage'/'clothImage').
+    Requires environment variable MIRAGIC_API_KEY to be set.
+    """
+    api_key = os.environ.get('MIRAGIC_API_KEY')
+    base_url = os.environ.get('MIRAGIC_BASE_URL', 'https://backend.miragic.ai')
+    if not api_key:
+        return jsonify({'success': False, 'error': 'MIRAGIC_API_KEY not configured'}), 500
+
+    # Accept multiple possible field names
+    person_file = None
+    cloth_file = None
+    if 'person_image' in request.files:
+        person_file = request.files['person_image']
+    elif 'humanImage' in request.files:
+        person_file = request.files['humanImage']
+
+    if 'cloth_image' in request.files:
+        cloth_file = request.files['cloth_image']
+    elif 'clothImage' in request.files:
+        cloth_file = request.files['clothImage']
+
+    if not person_file or not cloth_file:
+        return jsonify({'success': False, 'error': 'please upload both person and cloth images'}), 400
+
+    url = base_url.rstrip('/') + '/api/v1/virtual-try-on'
+    files = {
+        'humanImage': (person_file.filename or 'person.jpg', person_file.stream, person_file.content_type or 'image/jpeg'),
+        'clothImage': (cloth_file.filename or 'cloth.jpg', cloth_file.stream, cloth_file.content_type or 'image/jpeg')
+    }
+    headers = {'X-API-Key': api_key}
+
+    try:
+        resp = requests.post(url, headers=headers, files=files, timeout=60)
+    except Exception as e:
+        return jsonify({'success': False, 'error': f'request failed: {str(e)}'}), 502
+
+    # If external service returned an image, forward it as data URI
+    content_type = resp.headers.get('Content-Type', '')
+    if resp.status_code == 200 and content_type.startswith('image'):
+        b64 = base64.b64encode(resp.content).decode('utf-8')
+        img_uri = f'data:{content_type};base64,{b64}'
+        saved = save_data_uri(img_uri, app.config['GENERATED_FOLDER'], 'virtual_tryon')
+        return jsonify({'success': True, 'image': img_uri, 'file': os.path.basename(saved)})
+
+    # Else try to parse JSON and relay it
+    try:
+        data = resp.json()
+        # If the response contains an image URL or data, try to normalize
+        if isinstance(data, dict) and 'image' in data:
+            return jsonify({'success': True, **data})
+        return jsonify({'success': False, 'error': 'external api error', 'detail': data}), resp.status_code
+    except ValueError:
+        # Not JSON: return plain text
+        return jsonify({'success': False, 'error': 'external api returned non-json', 'detail': resp.text}), resp.status_code
 
 
 @app.post('/api/contact')

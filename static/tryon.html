@@ -161,7 +161,7 @@
       </div>
     </div>
 
-    <button onclick="tryOn()">✨ Try It On</button>
+    <button id="tryBtn" onclick="tryOn()">✨ Try It On</button>
 
     <div id="result">
       <h3>Your Virtual Try-On Result</h3>
@@ -198,18 +198,40 @@
       }
     });
 
-    function tryOn() {
-      const personImg = document.getElementById("personPreview").src;
-      const clothImg = document.getElementById("clothPreview").src;
-
-      if (!personImg || !clothImg) {
-        alert("Please upload both images first!");
+    async function tryOn() {
+      const personInput = document.getElementById('personInput');
+      const clothInput = document.getElementById('clothInput');
+      const btn = document.getElementById('tryBtn');
+      if (!personInput.files[0] || !clothInput.files[0]) {
+        alert('Please upload both images first!');
         return;
       }
 
-      document.getElementById("resultImage").src = personImg;
-      document.getElementById("result").style.display = "block";
-      alert("Demo complete! Connect backend for AI processing.");
+      btn.disabled = true;
+      btn.textContent = 'Processing...';
+
+      const fd = new FormData();
+      // append both common names so backend and external api accept it
+      fd.append('person_image', personInput.files[0]);
+      fd.append('cloth_image', clothInput.files[0]);
+      fd.append('humanImage', personInput.files[0]);
+      fd.append('clothImage', clothInput.files[0]);
+
+      try {
+        const res = await fetch('/api/virtual-try-on', { method: 'POST', body: fd });
+        const data = await res.json();
+        if (data.success && data.image) {
+          document.getElementById('resultImage').src = data.image;
+          document.getElementById('result').style.display = 'block';
+        } else {
+          alert('Error: ' + (data.error || data.detail || 'Unknown error'));
+        }
+      } catch (err) {
+        alert('Request failed: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '✨ Try It On';
+      }
     }
   </script>
 </body>

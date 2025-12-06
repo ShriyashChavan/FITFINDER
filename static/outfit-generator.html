@@ -304,14 +304,7 @@
             </div>
         </div>
 
-        <div class="prompt-section">
-            <h3 style="margin-bottom: 15px;">Custom Prompt (Optional)</h3>
-            <textarea 
-                class="prompt-input" 
-                id="customPrompt" 
-                placeholder="Describe your desired outfit... e.g., 'oversized blazer with light blue jeans and white sneakers'"
-            ></textarea>
-        </div>
+        <!-- Custom prompt removed: demo-only generator uses preset scene/style/gender -->
 
         <button class="generate-btn" id="generateBtn" onclick="generateOutfit()">
             🎨 Generate Outfit
@@ -359,8 +352,6 @@
             const loadingDiv = document.getElementById('loading');
             const resultDiv = document.getElementById('result');
             const generateBtn = document.getElementById('generateBtn');
-            const customPrompt = document.getElementById('customPrompt').value;
-
             errorDiv.style.display = 'none';
             resultDiv.style.display = 'none';
             loadingDiv.style.display = 'block';
@@ -373,8 +364,7 @@
                     body: JSON.stringify({
                         scene: selectedScene,
                         style: selectedStyle,
-                        gender: selectedGender,
-                        custom_prompt: customPrompt
+                        gender: selectedGender
                     })
                 });
 
