@@ -166,6 +166,7 @@
     <div id="result">
       <h3>Your Virtual Try-On Result</h3>
       <img id="resultImage">
+      <div id="tryonNote" class="text-muted hidden" style="margin-top:8px;font-size:14px"></div>
     </div>
 
     <footer>Made with ❤️ by FitFinder</footer>
@@ -223,6 +224,13 @@
         if (data.success && data.image) {
           document.getElementById('resultImage').src = data.image;
           document.getElementById('result').style.display = 'block';
+          const noteEl = document.getElementById('tryonNote');
+          if (data.note === 'local_fallback') {
+            noteEl.textContent = 'Demo result — MIRAGIC_API_KEY not configured (local fallback)';
+            noteEl.classList.remove('hidden');
+          } else {
+            noteEl.classList.add('hidden');
+          }
         } else {
           alert('Error: ' + (data.error || data.detail || 'Unknown error'));
         }
