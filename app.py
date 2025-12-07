@@ -152,8 +152,29 @@ def virtual_try_on_proxy():
     """
     api_key = os.environ.get('MIRAGIC_API_KEY')
     base_url = os.environ.get('MIRAGIC_BASE_URL', 'https://backend.miragic.ai')
+    # If no external API key is configured, fall back to local demo composition
     if not api_key:
-        return jsonify({'success': False, 'error': 'MIRAGIC_API_KEY not configured'}), 500
+        try:
+            # perform local try-on composition (same logic as /api/tryon)
+            person = Image.open(person_file.stream).convert('RGBA')
+            cloth = Image.open(cloth_file.stream).convert('RGBA')
+            pw, ph = person.size
+            cw, ch = cloth.size
+            target_w = int(pw * 0.55)
+            scale = target_w / max(cw, 1)
+            new_size = (max(int(cw*scale),1), max(int(ch*scale),1))
+            cloth_r = cloth.resize(new_size, Image.LANCZOS)
+            x = (pw - new_size[0]) // 2
+            y = max(int(ph * 0.25) - new_size[1]//8, 0)
+            comp = person.copy()
+            comp.alpha_composite(cloth_r, (x,y))
+            buf = io.BytesIO()
+            comp.convert('RGB').save(buf, format='PNG')
+            img_uri = 'data:image/png;base64,' + base64.b64encode(buf.getvalue()).decode('utf-8')
+            saved = save_data_uri(img_uri, app.config['GENERATED_FOLDER'], 'virtual_tryon_fallback')
+            return jsonify({'success': True, 'image': img_uri, 'file': os.path.basename(saved), 'note': 'local_fallback'})
+        except Exception as e:
+            return jsonify({'success': False, 'error': 'local tryon failed', 'detail': str(e)}), 500
 
     # Accept multiple possible field names
     person_file = None
