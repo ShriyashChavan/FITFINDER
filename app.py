@@ -1,41 +1,33 @@
-"""FitFinder - Clean AI-capable backend (single canonical file)
+"""FitFinder - Canonical backend (fresh copy)
 
-This backend is self-contained and avoids duplicate route definitions.
-Endpoints:
-- GET  /api/health
-- POST /api/generate-outfit
-- POST /api/tryon
-- POST /api/contact
-- GET  /api/admin/stats
-- static file serving
-
-Demo mode: when no HF token is set, the generator returns a Pillow placeholder image.
+This file will replace the corrupted `app.py`.
 """
 
 import os
 import io
-import json
 import time
+import json
 import base64
 from datetime import datetime
 
 from flask import Flask, request, jsonify, send_from_directory, Response
 from flask_cors import CORS
-from PIL import Image, ImageDraw
 import requests
+from PIL import Image, ImageDraw
+
+
+APP_ROOT = os.path.dirname(os.path.abspath(__file__))
+GENERATED_FOLDER = os.path.join(APP_ROOT, 'generated_outfits')
+UPLOAD_FOLDER = os.path.join(APP_ROOT, 'uploads')
+CONTACTS_FILE = os.path.join(APP_ROOT, 'contacts.json')
+
+os.makedirs(GENERATED_FOLDER, exist_ok=True)
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 
 app = Flask(__name__, static_folder='static')
 CORS(app)
 
-app.config['UPLOAD_FOLDER'] = 'uploads'
-app.config['GENERATED_FOLDER'] = 'generated_outfits'
-os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-os.makedirs(app.config['GENERATED_FOLDER'], exist_ok=True)
-
-CONTACTS_FILE = 'contacts.json'
-
-# Hugging Face integration removed per request: always use demo generator
 
 SCENES = {'casual', 'work', 'date-night', 'workout', 'formal', 'party'}
 STYLES = {'minimalist', 'vintage', 'streetwear', 'comfort', 'bohemian', 'artistic'}
@@ -69,7 +61,6 @@ QUALITY = 'high quality, professional fashion photography, realistic fabric text
 
 
 def build_prompt(scene, style, gender):
-    # Build a concise prompt from selected options (custom prompts removed)
     parts = [GENDER_PROMPTS.get(gender, 'fashion model'), 'wearing', SCENE_PROMPTS.get(scene, ''), STYLE_PROMPTS.get(style, '')]
     parts.append(QUALITY)
     return ', '.join([p for p in parts if p])
@@ -102,7 +93,7 @@ def demo_image(scene, style, gender, note='demo'):
 
 @app.get('/api/health')
 def health():
-    return jsonify({'status': 'healthy', 'hf': False, 'time': datetime.now().isoformat()})
+    return jsonify({'status': 'healthy', 'miragic': bool(os.environ.get('MIRAGIC_API_KEY')), 'time': datetime.now().isoformat()})
 
 
 @app.post('/api/generate-outfit')
@@ -111,13 +102,11 @@ def generate_outfit():
     scene = data.get('scene')
     style = data.get('style')
     gender = data.get('gender')
-    # custom prompt support removed; ignore any `custom_prompt` field
     if scene not in SCENES or style not in STYLES or gender not in GENDERS:
         return jsonify({'success': False, 'error': 'invalid scene/style/gender'}), 400
-    # Always use local demo generator (Hugging Face removed)
     prompt = build_prompt(scene, style, gender)
     img_uri = demo_image(scene, style, gender, note='demo-only')
-    saved = save_data_uri(img_uri, app.config['GENERATED_FOLDER'], f'outfit_{scene}_{style}')
+    saved = save_data_uri(img_uri, GENERATED_FOLDER, f'outfit_{scene}_{style}')
     return jsonify({'success': True, 'file': os.path.basename(saved), 'image': img_uri, 'prompt': prompt})
 
 
@@ -125,37 +114,49 @@ def generate_outfit():
 def tryon():
     if 'person_image' not in request.files or 'cloth_image' not in request.files:
         return jsonify({'success': False, 'error': 'upload both files'}), 400
-    person = Image.open(request.files['person_image'].stream).convert('RGBA')
-    cloth = Image.open(request.files['cloth_image'].stream).convert('RGBA')
-    pw, ph = person.size
-    cw, ch = cloth.size
-    target_w = int(pw * 0.55)
-    scale = target_w / max(cw, 1)
-    new_size = (max(int(cw*scale),1), max(int(ch*scale),1))
-    cloth_r = cloth.resize(new_size, Image.LANCZOS)
-    x = (pw - new_size[0]) // 2
-    y = max(int(ph * 0.25) - new_size[1]//8, 0)
-    comp = person.copy()
-    comp.alpha_composite(cloth_r, (x,y))
-    buf = io.BytesIO()
-    comp.convert('RGB').save(buf, format='PNG')
-    img_uri = 'data:image/png;base64,' + base64.b64encode(buf.getvalue()).decode('utf-8')
-    saved = save_data_uri(img_uri, app.config['GENERATED_FOLDER'], 'tryon')
-    return jsonify({'success': True, 'file': os.path.basename(saved), 'image': img_uri})
+    try:
+        person = Image.open(request.files['person_image'].stream).convert('RGBA')
+        cloth = Image.open(request.files['cloth_image'].stream).convert('RGBA')
+        pw, ph = person.size
+        cw, ch = cloth.size
+        target_w = int(pw * 0.55)
+        scale = target_w / max(cw, 1)
+        new_size = (max(int(cw*scale),1), max(int(ch*scale),1))
+        cloth_r = cloth.resize(new_size, Image.LANCZOS)
+        x = (pw - new_size[0]) // 2
+        y = max(int(ph * 0.25) - new_size[1]//8, 0)
+        comp = person.copy()
+        comp.alpha_composite(cloth_r, (x,y))
+        buf = io.BytesIO()
+        comp.convert('RGB').save(buf, format='PNG')
+        img_uri = 'data:image/png;base64,' + base64.b64encode(buf.getvalue()).decode('utf-8')
+        saved = save_data_uri(img_uri, GENERATED_FOLDER, 'tryon')
+        return jsonify({'success': True, 'file': os.path.basename(saved), 'image': img_uri})
+    except Exception as e:
+        return jsonify({'success': False, 'error': 'tryon failed', 'detail': str(e)}), 500
 
 
 @app.post('/api/virtual-try-on')
 def virtual_try_on_proxy():
-    """Proxy endpoint: accepts two file uploads and forwards them to external Miragic virtual-try-on API.
-    Expects multipart form with 'person_image' and 'cloth_image' (or 'humanImage'/'clothImage').
-    Requires environment variable MIRAGIC_API_KEY to be set.
-    """
     api_key = os.environ.get('MIRAGIC_API_KEY')
     base_url = os.environ.get('MIRAGIC_BASE_URL', 'https://backend.miragic.ai')
-    # If no external API key is configured, fall back to local demo composition
+
+    max_bytes = 8 * 1024 * 1024
+    if request.content_length and request.content_length > max_bytes:
+        return jsonify({'success': False, 'error': 'payload too large'}), 413
+
+    person_file = request.files.get('person_image') or request.files.get('humanImage')
+    cloth_file = request.files.get('cloth_image') or request.files.get('clothImage')
+    if not person_file or not cloth_file:
+        return jsonify({'success': False, 'error': 'please upload both person and cloth images'}), 400
+
+    for f in (person_file, cloth_file):
+        ctype = getattr(f, 'content_type', '')
+        if not ctype or not ctype.startswith('image'):
+            return jsonify({'success': False, 'error': 'invalid file type; images only'}), 400
+
     if not api_key:
         try:
-            # perform local try-on composition (same logic as /api/tryon)
             person = Image.open(person_file.stream).convert('RGBA')
             cloth = Image.open(cloth_file.stream).convert('RGBA')
             pw, ph = person.size
@@ -171,26 +172,10 @@ def virtual_try_on_proxy():
             buf = io.BytesIO()
             comp.convert('RGB').save(buf, format='PNG')
             img_uri = 'data:image/png;base64,' + base64.b64encode(buf.getvalue()).decode('utf-8')
-            saved = save_data_uri(img_uri, app.config['GENERATED_FOLDER'], 'virtual_tryon_fallback')
+            saved = save_data_uri(img_uri, GENERATED_FOLDER, 'virtual_tryon_fallback')
             return jsonify({'success': True, 'image': img_uri, 'file': os.path.basename(saved), 'note': 'local_fallback'})
         except Exception as e:
             return jsonify({'success': False, 'error': 'local tryon failed', 'detail': str(e)}), 500
-
-    # Accept multiple possible field names
-    person_file = None
-    cloth_file = None
-    if 'person_image' in request.files:
-        person_file = request.files['person_image']
-    elif 'humanImage' in request.files:
-        person_file = request.files['humanImage']
-
-    if 'cloth_image' in request.files:
-        cloth_file = request.files['cloth_image']
-    elif 'clothImage' in request.files:
-        cloth_file = request.files['clothImage']
-
-    if not person_file or not cloth_file:
-        return jsonify({'success': False, 'error': 'please upload both person and cloth images'}), 400
 
     url = base_url.rstrip('/') + '/api/v1/virtual-try-on'
     files = {
@@ -198,38 +183,24 @@ def virtual_try_on_proxy():
         'clothImage': (cloth_file.filename or 'cloth.jpg', cloth_file.stream, cloth_file.content_type or 'image/jpeg')
     }
     headers = {'X-API-Key': api_key}
-
     try:
         resp = requests.post(url, headers=headers, files=files, timeout=60)
     except Exception as e:
         return jsonify({'success': False, 'error': f'request failed: {str(e)}'}), 502
 
-    # If external service returned an image, forward it as data URI
     content_type = resp.headers.get('Content-Type', '')
     if resp.status_code == 200 and content_type.startswith('image'):
-        # Save the image locally and stream raw bytes back to the client
-        try:
-            saved = None
-            try:
-                b64 = base64.b64encode(resp.content).decode('utf-8')
-                img_uri = f'data:{content_type};base64,{b64}'
-                saved = save_data_uri(img_uri, app.config['GENERATED_FOLDER'], 'virtual_tryon')
-            except Exception:
-                # ignore save errors, still stream the image
-                saved = None
-        except Exception:
-            saved = None
-        return Response(resp.content, mimetype=content_type)
+        b64 = base64.b64encode(resp.content).decode('utf-8')
+        img_uri = f'data:{content_type};base64,{b64}'
+        saved = save_data_uri(img_uri, GENERATED_FOLDER, 'virtual_tryon')
+        return jsonify({'success': True, 'image': img_uri, 'file': os.path.basename(saved), 'note': 'miragic'})
 
-    # Else try to parse JSON and relay it
     try:
         data = resp.json()
-        # If the response contains an image URL or data, try to normalize
         if isinstance(data, dict) and 'image' in data:
             return jsonify({'success': True, **data})
         return jsonify({'success': False, 'error': 'external api error', 'detail': data}), resp.status_code
     except ValueError:
-        # Not JSON: return plain text
         return jsonify({'success': False, 'error': 'external api returned non-json', 'detail': resp.text}), resp.status_code
 
 
@@ -255,8 +226,8 @@ def contact():
 
 @app.get('/api/admin/stats')
 def admin_stats():
-    gen = len([f for f in os.listdir(app.config['GENERATED_FOLDER']) if f.endswith('.png')])
-    up = len([f for f in os.listdir(app.config['UPLOAD_FOLDER']) if f.endswith('.png')])
+    gen = len([f for f in os.listdir(GENERATED_FOLDER) if f.endswith('.png')])
+    up = len([f for f in os.listdir(UPLOAD_FOLDER) if f.endswith('.png')])
     contacts = 0
     if os.path.exists(CONTACTS_FILE):
         try:
@@ -277,5 +248,5 @@ def static_files(filename):
 
 
 if __name__ == '__main__':
-    print('FitFinder starting. HF configured: False')
+    print('FitFinder (clean) starting. MIRAGIC configured:', bool(os.environ.get('MIRAGIC_API_KEY')))
     app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=False)
