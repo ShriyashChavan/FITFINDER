@@ -220,19 +220,30 @@
 
       try {
         const res = await fetch('/api/virtual-try-on', { method: 'POST', body: fd });
-        const data = await res.json();
-        if (data.success && data.image) {
-          document.getElementById('resultImage').src = data.image;
+        const ct = res.headers.get('content-type') || '';
+        if (ct.startsWith('image/')) {
+          // server streamed raw image bytes
+          const blob = await res.blob();
+          const url = URL.createObjectURL(blob);
+          document.getElementById('resultImage').src = url;
           document.getElementById('result').style.display = 'block';
-          const noteEl = document.getElementById('tryonNote');
-          if (data.note === 'local_fallback') {
-            noteEl.textContent = 'Demo result — MIRAGIC_API_KEY not configured (local fallback)';
-            noteEl.classList.remove('hidden');
-          } else {
-            noteEl.classList.add('hidden');
-          }
+          // hide fallback note for streamed images
+          document.getElementById('tryonNote').classList.add('hidden');
         } else {
-          alert('Error: ' + (data.error || data.detail || 'Unknown error'));
+          const data = await res.json();
+          if (data.success && data.image) {
+            document.getElementById('resultImage').src = data.image;
+            document.getElementById('result').style.display = 'block';
+            const noteEl = document.getElementById('tryonNote');
+            if (data.note === 'local_fallback') {
+              noteEl.textContent = 'Demo result — MIRAGIC_API_KEY not configured (local fallback)';
+              noteEl.classList.remove('hidden');
+            } else {
+              noteEl.classList.add('hidden');
+            }
+          } else {
+            alert('Error: ' + (data.error || data.detail || 'Unknown error'));
+          }
         }
       } catch (err) {
         alert('Request failed: ' + err.message);

@@ -19,7 +19,7 @@ import time
 import base64
 from datetime import datetime
 
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, Response
 from flask_cors import CORS
 from PIL import Image, ImageDraw
 import requests
@@ -207,10 +207,19 @@ def virtual_try_on_proxy():
     # If external service returned an image, forward it as data URI
     content_type = resp.headers.get('Content-Type', '')
     if resp.status_code == 200 and content_type.startswith('image'):
-        b64 = base64.b64encode(resp.content).decode('utf-8')
-        img_uri = f'data:{content_type};base64,{b64}'
-        saved = save_data_uri(img_uri, app.config['GENERATED_FOLDER'], 'virtual_tryon')
-        return jsonify({'success': True, 'image': img_uri, 'file': os.path.basename(saved)})
+        # Save the image locally and stream raw bytes back to the client
+        try:
+            saved = None
+            try:
+                b64 = base64.b64encode(resp.content).decode('utf-8')
+                img_uri = f'data:{content_type};base64,{b64}'
+                saved = save_data_uri(img_uri, app.config['GENERATED_FOLDER'], 'virtual_tryon')
+            except Exception:
+                # ignore save errors, still stream the image
+                saved = None
+        except Exception:
+            saved = None
+        return Response(resp.content, mimetype=content_type)
 
     # Else try to parse JSON and relay it
     try:
