@@ -20,6 +20,9 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import requests
 from PIL import Image
+import sqlite3
+
+DB_NAME = os.path.join(os.path.dirname(__file__), 'users.db')
 
 
 APP_ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -253,6 +256,33 @@ def tryon_combo():
 @app.route('/api/health', methods=['GET'])
 def health():
     return jsonify({'status': 'healthy', 'miragic': bool(API_KEY)})
+
+
+# --- Simple login route using SQLite users.db ---
+def get_db_connection():
+    conn = sqlite3.connect(DB_NAME)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+@app.route('/login', methods=['POST'])
+def login():
+    userid = request.form.get('userid')
+    password = request.form.get('password')
+
+    if not userid or not password:
+        return jsonify({'success': False, 'message': 'User ID and password are required'}), 400
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('SELECT * FROM users WHERE userid = ? AND password = ?', (userid, password))
+    user = cur.fetchone()
+    conn.close()
+
+    if user:
+        return jsonify({'success': True, 'message': 'Login successful'})
+    else:
+        return jsonify({'success': False, 'message': 'Invalid credentials'}), 401
 
 
 if __name__ == '__main__':

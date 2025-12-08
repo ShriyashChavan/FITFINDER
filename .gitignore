@@ -28,3 +28,9 @@ dist/
 
 # Env files
 .env
+ 
+# Local DB
+users.db
+
+# Temp folders
+tmp/
