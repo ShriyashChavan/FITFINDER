@@ -16,7 +16,7 @@ import json
 import base64
 from datetime import datetime
 
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, redirect, url_for, session, send_from_directory
 from flask_cors import CORS
 import requests
 from PIL import Image
@@ -34,6 +34,9 @@ os.makedirs(TMP_FOLDER, exist_ok=True)
 
 app = Flask(__name__, static_folder='static')
 CORS(app)
+
+# session secret (override with env var in production)
+app.secret_key = os.environ.get('FLASK_SECRET') or os.environ.get('SECRET_KEY') or 'dev-secret-please-change'
 
 
 # Miragic configuration
@@ -271,7 +274,10 @@ def login():
     password = request.form.get('password')
 
     if not userid or not password:
-        return jsonify({'success': False, 'message': 'User ID and password are required'}), 400
+        if request.is_json:
+            return jsonify({'success': False, 'message': 'User ID and password are required'}), 400
+        else:
+            return redirect(url_for('static', filename='RPLoginPage.html'))
 
     conn = get_db_connection()
     cur = conn.cursor()
@@ -280,9 +286,30 @@ def login():
     conn.close()
 
     if user:
-        return jsonify({'success': True, 'message': 'Login successful'})
+        session['user'] = userid
+        if request.is_json:
+            return jsonify({'success': True, 'message': 'Login successful'})
+        else:
+            return redirect(url_for('dashboard'))
     else:
-        return jsonify({'success': False, 'message': 'Invalid credentials'}), 401
+        if request.is_json:
+            return jsonify({'success': False, 'message': 'Invalid credentials'}), 401
+        else:
+            return redirect(url_for('static', filename='RPLoginPage.html'))
+
+
+@app.route('/dashboard', methods=['GET'])
+def dashboard():
+    user = session.get('user')
+    if not user:
+        return redirect(url_for('static', filename='RPLoginPage.html'))
+    return send_from_directory(app.static_folder, 'dashboard.html')
+
+
+@app.route('/logout', methods=['GET', 'POST'])
+def logout():
+    session.pop('user', None)
+    return redirect(url_for('static', filename='RPLoginPage.html'))
 
 
 if __name__ == '__main__':
