@@ -20,7 +20,8 @@ from flask import Flask, request, jsonify, redirect, url_for, session, send_from
 from flask_cors import CORS
 import requests
 from PIL import Image
-import sqlite3
+from sqlalchemy import create_engine, text
+from passlib.hash import bcrypt
 
 DB_NAME = os.path.join(os.path.dirname(__file__), 'users.db')
 
@@ -42,6 +43,11 @@ app.secret_key = os.environ.get('FLASK_SECRET') or os.environ.get('SECRET_KEY') 
 # Miragic configuration
 API_KEY = os.environ.get('MIRAGIC_API_KEY')
 BASE_URL = 'https://backend.miragic.ai'
+
+# Database configuration (use DATABASE_URL env var for hosted DB)
+DEFAULT_SQLITE = f"sqlite:///{os.path.join(APP_ROOT, 'users.db')}"
+DATABASE_URL = os.environ.get('DATABASE_URL') or DEFAULT_SQLITE
+engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False} if DATABASE_URL.startswith('sqlite:') else {})
 
 
 def _post_files(url, data, files):
@@ -262,10 +268,10 @@ def health():
 
 
 # --- Simple login route using SQLite users.db ---
-def get_db_connection():
-    conn = sqlite3.connect(DB_NAME)
-    conn.row_factory = sqlite3.Row
-    return conn
+def get_user_password(userid):
+    with engine.connect() as conn:
+        row = conn.execute(text('SELECT password FROM users WHERE userid = :u'), {'u': userid}).fetchone()
+        return row[0] if row is not None else None
 
 
 @app.route('/login', methods=['POST'])
@@ -279,13 +285,9 @@ def login():
         else:
             return redirect(url_for('static', filename='RPLoginPage.html'))
 
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute('SELECT * FROM users WHERE userid = ? AND password = ?', (userid, password))
-    user = cur.fetchone()
-    conn.close()
-
-    if user:
+    # fetch hashed password from DB and verify using bcrypt
+    stored = get_user_password(userid)
+    if stored and bcrypt.verify(password, stored):
         session['user'] = userid
         if request.is_json:
             return jsonify({'success': True, 'message': 'Login successful'})

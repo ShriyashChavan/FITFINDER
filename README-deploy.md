@@ -22,6 +22,8 @@ Railway (quickest)
 5. Add environment variables in Railway dashboard if needed:
    - `HF_API_TOKEN` (optional) — your Hugging Face token
    - `HF_MODEL` (optional) — model id (default: `stabilityai/stable-diffusion-2-1`)
+   - `DATABASE_URL` — your hosted database URL (e.g. `postgres://...`). If not set, the app will use local sqlite.
+   - `FLASK_SECRET` — a random secret for session encryption (required for login sessions).
 6. Deploy and open the provided URL.
 
 Heroku (alternative)
