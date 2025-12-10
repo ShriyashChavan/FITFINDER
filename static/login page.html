@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login Page</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f0f0f0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .container {
+      display: flex;
+      width: 800px;
+      height: 500px;
+      box-shadow: 0px 4px 15px rgba(0,0,0,0.1);
+      border-radius: 10px;
+      overflow: hidden;
+      background: #fff;
+    }
+
+    .login-section {
+      flex: 1;
+      padding: 40px;
+    }
+
+    .login-section h2 {
+      font-size: 22px;
+      margin-bottom: 10px;
+      font-family: Georgia, serif;
+    }
+
+    .login-section p {
+      font-size: 14px;
+      color: #777;
+      margin-bottom: 20px;
+    }
+
+    .input-box {
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+    }
+
+    .login-btn {
+      width: 100%;
+      padding: 12px;
+      background: #111;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+      margin-top: 15px;
+    }
+
+    .image-section {
+      flex: 1;
+      background: url('https://bostonwardrobes.co.nz/wp-content/uploads/2023/08/Article-2-Wardrobe-design-rules-from-the-experts-2.webp') no-repeat center center/cover;
+      position: relative;
+    }
+
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <div class="login-section">
+      <h2>YOUR WELCOME!</h2>
+      <p>Fit And Fashionable With Fit-Finder.</p>
+
+      <input type="text" id="user" placeholder="UserID" class="input-box">
+      <input type="password" id="pass" placeholder="Password" class="input-box">
+
+      <button class="login-btn" id="loginBtn">Log in</button>
+    </div>
+
+    <div class="image-section"></div>
+  </div>
+
+<script>
+  document.getElementById("loginBtn").addEventListener("click", function () {
+    let user = document.getElementById("user").value;
+    let pass = document.getElementById("pass").value;
+
+    if (user === "admin123" && pass === "Secret@123") {
+      localStorage.setItem("loggedIn", "true");
+      window.location.href = "index.html";
+    } else {
+      alert("Incorrect UserID or Password");
+    }
+  });
+</script>
+
+</body>
+</html>

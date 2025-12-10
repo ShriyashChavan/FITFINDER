@@ -1,6 +1,5 @@
 # FitFinder (FitFinder - AI Fashion Assistant)
 
-Simple Flask backend that serves static front-end files from the `static/` directory.
 
 Quickstart
 
